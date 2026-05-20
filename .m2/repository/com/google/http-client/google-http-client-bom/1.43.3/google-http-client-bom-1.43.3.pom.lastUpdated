@@ -1,0 +1,9 @@
+#NOTE: This is a Maven Resolver internal implementation file, its format can be changed without prior notice.
+#Wed May 20 17:56:58 IST 2026
+@172.31.2.4\:8080>@default-flyway-community-db-support-https\://maven.pkg.github.com/flyway/flyway-community-db-support/.lastUpdated=1779280018175
+@172.31.2.4\:8080>@default-flyway-repo-https\://nexus.flywaydb.org/repository/flyway/.lastUpdated=1779280017767
+https\://maven-central.storage-download.googleapis.com/maven2/.lastUpdated=1779280018380
+https\://maven.pkg.github.com/flyway/flyway-community-db-support/.error=Could not transfer artifact com.google.http-client\:google-http-client-bom\:pom\:1.43.3 from/to flyway-community-db-support (https\://maven.pkg.github.com/flyway/flyway-community-db-support)\: authentication failed for https\://maven.pkg.github.com/flyway/flyway-community-db-support/com/google/http-client/google-http-client-bom/1.43.3/google-http-client-bom-1.43.3.pom, status\: 401 Unauthorized
+https\://nexus.flywaydb.org/repository/flyway/.error=Could not transfer artifact com.google.http-client\:google-http-client-bom\:pom\:1.43.3 from/to flyway-repo (https\://nexus.flywaydb.org/repository/flyway/)\: transfer failed for https\://nexus.flywaydb.org/repository/flyway/com/google/http-client/google-http-client-bom/1.43.3/google-http-client-bom-1.43.3.pom, status\: 503 Service Unavailable, proxy\: ProxyInfo{host\='172.31.2.4', userName\='null', port\=8080, type\='https', nonProxyHosts\='null'}
+https\://repo.gradle.org/gradle/libs-releases-local/.error=
+https\://repo.gradle.org/gradle/libs-releases-local/.lastUpdated=1779280017754
