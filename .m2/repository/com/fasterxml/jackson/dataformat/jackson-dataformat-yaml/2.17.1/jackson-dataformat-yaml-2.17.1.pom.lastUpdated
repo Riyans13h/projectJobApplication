@@ -1,7 +1,0 @@
-#NOTE: This is a Maven Resolver internal implementation file, its format can be changed without prior notice.
-#Wed May 20 18:04:52 IST 2026
-@172.31.2.4\:8080>@default-spring-release-https\://repo.spring.io/release/.lastUpdated=1779280464941
-@172.31.2.4\:8080>@default-spring-snapshot-https\://repo.spring.io/snapshot/.lastUpdated=1779280464943
-https\://repo.maven.apache.org/maven2/.lastUpdated=1779280492021
-https\://repo.spring.io/release/.error=Could not transfer artifact com.fasterxml.jackson.dataformat\:jackson-dataformat-yaml\:pom\:2.17.1 from/to spring-release (https\://repo.spring.io/release)\: transfer failed for https\://repo.spring.io/release/com/fasterxml/jackson/dataformat/jackson-dataformat-yaml/2.17.1/jackson-dataformat-yaml-2.17.1.pom, proxy\: ProxyInfo{host\='172.31.2.4', userName\='null', port\=8080, type\='https', nonProxyHosts\='null'}
-https\://repo.spring.io/snapshot/.error=Could not transfer artifact com.fasterxml.jackson.dataformat\:jackson-dataformat-yaml\:pom\:2.17.1 from/to spring-snapshot (https\://repo.spring.io/snapshot)\: transfer failed for https\://repo.spring.io/snapshot/com/fasterxml/jackson/dataformat/jackson-dataformat-yaml/2.17.1/jackson-dataformat-yaml-2.17.1.pom, proxy\: ProxyInfo{host\='172.31.2.4', userName\='null', port\=8080, type\='https', nonProxyHosts\='null'}

@@ -1,6 +1,0 @@
-(self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[931],{4196:function(n,e,t){Promise.resolve().then(t.bind(t,8816))},8816:function(n,e,t){"use strict";t.r(e),t.d(e,{default:function(){return s}});var r=t(7437),u=t(6463),c=t(2265),a=t(816);function s(){let n=(0,u.useRouter)();return(0,c.useEffect)(()=>{n.replace("/dashboard")},[n]),(0,r.jsx)("main",{className:"flex min-h-screen items-center justify-center bg-background",children:(0,r.jsx)(a.a,{})})}},816:function(n,e,t){"use strict";t.d(e,{a:function(){return a}});var r=t(7437);/**
- * @license lucide-react v0.468.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */let u=(0,t(8030).Z)("LoaderCircle",[["path",{d:"M21 12a9 9 0 1 1-6.219-8.56",key:"13zald"}]]);var c=t(7934);function a(n){let{className:e}=n;return(0,r.jsx)(u,{className:(0,c.cn)("h-5 w-5 animate-spin text-muted-foreground",e)})}},7934:function(n,e,t){"use strict";t.d(e,{cn:function(){return c}});var r=t(4839),u=t(6164);function c(){for(var n=arguments.length,e=Array(n),t=0;t<n;t++)e[t]=arguments[t];return(0,u.m6)((0,r.W)(e))}}},function(n){n.O(0,[235,971,23,744],function(){return n(n.s=4196)}),_N_E=n.O()}]);
