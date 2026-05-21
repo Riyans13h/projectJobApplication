@@ -30,7 +30,7 @@ spring:
   
   security:
     cors:
-      allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+      allowed-origins: ${CORS_ALLOWED_ORIGINS}
       allowed-methods: GET,POST,PUT,DELETE,OPTIONS
       allowed-headers: "*"
       allow-credentials: true
@@ -41,13 +41,13 @@ spring:
       max-request-size: 10MB
 
 server:
-  port: 8080
+  port: ${SERVER_PORT}
   servlet:
-    context-path: /api
+    context-path: ${SERVER_CONTEXT_PATH}
 
 jwt:
-  secret-key: ${JWT_SECRET_KEY:your-super-secret-key-change-this-in-production-your-super-secret-key-change-this}
-  expiration: 86400000
+  secret-key: ${JWT_SECRET_KEY}
+  expiration: ${JWT_EXPIRATION_MS:86400000}
 
 cloudinary:
   cloud-name: ${CLOUDINARY_CLOUD_NAME:}
@@ -55,16 +55,21 @@ cloudinary:
   api-secret: ${CLOUDINARY_API_SECRET:}
 
 ollama:
-  base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
-  model: ${OLLAMA_MODEL:llama3.1}
-  timeout-seconds: ${OLLAMA_TIMEOUT_SECONDS:60}
+  base-url: ${OLLAMA_BASE_URL}
+  model: ${OLLAMA_MODEL}
+  timeout-seconds: ${OLLAMA_TIMEOUT_SECONDS}
 
 app:
-  public-base-url: ${APP_PUBLIC_BASE_URL:http://localhost:8080/api}
+  public-base-url: ${APP_PUBLIC_BASE_URL}
   file-storage:
-    local-dir: ${LOCAL_FILE_STORAGE_DIR:uploads}
+    local-dir: ${LOCAL_FILE_STORAGE_DIR}
   seed:
-    enabled: ${SEED_DATA_ENABLED:false}
+    enabled: ${SEED_DATA_ENABLED}
+    demo-email: ${SEED_DEMO_EMAIL}
+    demo-password: ${SEED_DEMO_PASSWORD}
+    demo-first-name: ${SEED_DEMO_FIRST_NAME}
+    demo-last-name: ${SEED_DEMO_LAST_NAME}
+    sample-file-base-url: ${SEED_SAMPLE_FILE_BASE_URL}
 
 springdoc:
   api-docs:
@@ -84,9 +89,9 @@ spring:
       on-profile: postgres
 
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/jobflow}
-    username: ${DB_USERNAME:jobflow}
-    password: ${DB_PASSWORD:jobflow}
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   flyway:

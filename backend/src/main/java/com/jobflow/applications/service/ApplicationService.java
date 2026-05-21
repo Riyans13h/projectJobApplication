@@ -13,6 +13,7 @@ import com.jobflow.applications.mapper.ApplicationMapper;
 import com.jobflow.applications.repository.ApplicationRepository;
 import com.jobflow.auth.entity.User;
 import com.jobflow.auth.service.AuthService;
+import com.jobflow.cooldown.service.CooldownService;
 import com.jobflow.interviews.repository.InterviewRepository;
 import com.jobflow.timeline.repository.TimelineRepository;
 import com.jobflow.timeline.service.TimelineService;
@@ -37,6 +38,7 @@ public class ApplicationService {
     private final TimelineRepository timelineRepository;
     private final InterviewRepository interviewRepository;
     private final AuthService authService;
+    private final CooldownService cooldownService;
 
     /**
      * Create a new application for logged-in user
@@ -115,6 +117,10 @@ public class ApplicationService {
                 resolveStatusEvent(status),
                 "Application status updated to " + status.getDisplayName()
         );
+        if (status == ApplicationStatus.REJECTED) {
+            cooldownService.createRejectedApplicationCooldown(updatedApplication)
+                    .ifPresent(cooldown -> log.info("Auto cooldown created for rejected application: {}", cooldown.getId()));
+        }
 
         log.info("Application status updated: {}", id);
         return applicationMapper.toResponse(updatedApplication);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Download } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { FilterPanel } from "@/components/contacts/FilterPanel";
@@ -12,7 +13,8 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Loader } from "@/components/ui/loader";
 import { contactService } from "@/services/contact.service";
-import type { ContactStatus, ContactType, HelpScore } from "@/types/contact";
+import type { Contact, ContactStatus, ContactType, HelpScore } from "@/types/contact";
+import { downloadCsv, timestampedCsvName } from "@/utils/csv";
 
 type DeleteRequest = { ids: number[]; label: string } | null;
 
@@ -92,13 +94,49 @@ export default function ContactsPage() {
 
   const selectedVisibleCount = selectedIds.filter((id) => visibleContacts.some((contact) => contact.id === id)).length;
 
+  const exportContacts = async () => {
+    const response = await contactService.list({
+      page: 0,
+      size: 1000,
+      company: company.trim() || undefined,
+      contactType,
+      status,
+      helpScore,
+    });
+    const normalizedName = name.trim().toLowerCase();
+    const rows = normalizedName ? response.content.filter((contact) => contact.name.toLowerCase().includes(normalizedName)) : response.content;
+
+    downloadCsv<Contact>(timestampedCsvName("jobflow-contacts"), rows, [
+      { header: "Name", value: (row) => row.name },
+      { header: "Company", value: (row) => row.company },
+      { header: "Role", value: (row) => row.role },
+      { header: "Level", value: (row) => row.level },
+      { header: "LinkedIn", value: (row) => row.linkedinUrl },
+      { header: "Email", value: (row) => row.email },
+      { header: "Phone", value: (row) => row.phone },
+      { header: "Type", value: (row) => row.contactType },
+      { header: "Status", value: (row) => row.status },
+      { header: "Help Score", value: (row) => row.helpScore },
+      { header: "Source", value: (row) => row.source },
+      { header: "Last Contact Date", value: (row) => row.lastContactDate },
+      { header: "Next Followup Date", value: (row) => row.nextFollowupDate },
+      { header: "Notes", value: (row) => row.notes },
+    ]);
+  };
+
   return (
     <DashboardShell>
       <div className="flex items-start justify-between gap-4">
         <Header title="Contacts" description="Manage recruiters, referrals, mentors, and follow-ups." />
-        <Button asChild>
-          <Link href="/contacts/create">New</Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" onClick={exportContacts} disabled={contacts.isLoading}>
+            <Download className="mr-2 h-4 w-4" />
+            CSV
+          </Button>
+          <Button asChild>
+            <Link href="/contacts/create">New</Link>
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-3">

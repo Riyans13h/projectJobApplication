@@ -8,6 +8,8 @@ interface AuthState {
   token: string | null;
   user: AuthUser | null;
   isAuthenticated: boolean;
+  hasHydrated: boolean;
+  setHasHydrated: (hasHydrated: boolean) => void;
   setSession: (response: AuthResponse) => void;
   logout: () => void;
 }
@@ -18,6 +20,8 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       user: null,
       isAuthenticated: false,
+      hasHydrated: false,
+      setHasHydrated: (hasHydrated) => set({ hasHydrated }),
       setSession: (response) =>
         set({
           token: response.accessToken,
@@ -34,6 +38,9 @@ export const useAuthStore = create<AuthState>()(
     {
       name: "jobflow-auth",
       partialize: (state) => ({ token: state.token, user: state.user, isAuthenticated: state.isAuthenticated }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     },
   ),
 );

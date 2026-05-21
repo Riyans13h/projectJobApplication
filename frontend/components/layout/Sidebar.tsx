@@ -1,6 +1,6 @@
 "use client";
 
-import { BriefcaseBusiness, CalendarDays, LayoutDashboard, Settings, Users } from "lucide-react";
+import { BriefcaseBusiness, CalendarDays, Hourglass, LayoutDashboard, Settings, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/utils/cn";
@@ -10,6 +10,7 @@ const items = [
   { href: "/applications", label: "Applications", icon: BriefcaseBusiness },
   { href: "/contacts", label: "Contacts", icon: Users },
   { href: "/interviews", label: "Interviews", icon: CalendarDays },
+  { href: "/cooldown", label: "Cooldown", icon: Hourglass },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

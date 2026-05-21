@@ -106,12 +106,47 @@ export interface TimelineEntry {
 
 export interface CooldownInfo {
   companyName: string;
+  role?: string;
   lastAppliedDate?: string;
   cooldownPeriod: number;
   eligibleReapplyDate?: string;
   cooldownActive: boolean;
   daysRemaining: number;
+  severity?: "HIGH" | "MEDIUM" | "LOW" | "COMPLETE" | string;
+  suggestedReapplyDate?: string;
   message: string;
+}
+
+export interface CompanyCooldown {
+  id: number;
+  companyName: string;
+  role?: string;
+  lastAppliedDate: string;
+  cooldownPeriod: number;
+  eligibleReapplyDate: string;
+  cooldownActive: boolean;
+  daysRemaining: number;
+  severity?: "HIGH" | "MEDIUM" | "LOW" | "COMPLETE" | string;
+  suggestedReapplyDate?: string;
+  message: string;
+  applyAnywayNote?: string;
+  appliedAnywayAt?: string;
+  source?: string;
+  createdAt: string;
+}
+
+export interface CompanyCooldownPayload {
+  companyName: string;
+  role?: string;
+  lastAppliedDate: string;
+  cooldownPeriod: number;
+  updateExisting?: boolean;
+}
+
+export interface CooldownTemplate {
+  name: string;
+  description: string;
+  cooldownPeriod: number;
 }
 
 export interface ApplicationStats {

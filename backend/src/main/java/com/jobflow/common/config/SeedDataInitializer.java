@@ -25,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -39,8 +40,22 @@ import java.util.List;
 @ConditionalOnProperty(prefix = "app.seed", name = "enabled", havingValue = "true")
 public class SeedDataInitializer implements CommandLineRunner {
 
-    private static final String DEMO_EMAIL = "demo@jobflow.local";
     private static final String SEED_JOB_PREFIX = "SEED-";
+
+    @Value("${app.seed.demo-email}")
+    private String demoEmail;
+
+    @Value("${app.seed.demo-password}")
+    private String demoPassword;
+
+    @Value("${app.seed.demo-first-name}")
+    private String demoFirstName;
+
+    @Value("${app.seed.demo-last-name}")
+    private String demoLastName;
+
+    @Value("${app.seed.sample-file-base-url}")
+    private String sampleFileBaseUrl;
 
     private final UserRepository userRepository;
     private final ApplicationRepository applicationRepository;
@@ -52,16 +67,16 @@ public class SeedDataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        User demoUser = userRepository.findByEmail(DEMO_EMAIL)
+        User demoUser = userRepository.findByEmail(demoEmail)
                 .orElseGet(() -> userRepository.save(User.builder()
-                        .firstName("Demo")
-                        .lastName("User")
-                        .email(DEMO_EMAIL)
-                        .password(passwordEncoder.encode("DemoPassword123"))
+                        .firstName(demoFirstName)
+                        .lastName(demoLastName)
+                        .email(demoEmail)
+                        .password(passwordEncoder.encode(demoPassword))
                         .build()));
 
         List<User> users = new ArrayList<>(userRepository.findAll());
-        if (users.stream().noneMatch(user -> DEMO_EMAIL.equals(user.getEmail()))) {
+        if (users.stream().noneMatch(user -> demoEmail.equals(user.getEmail()))) {
             users.add(demoUser);
         }
 
@@ -82,7 +97,7 @@ public class SeedDataInitializer implements CommandLineRunner {
         seedTimeline(applications);
         seedUploadedFiles(user, applications);
 
-        log.info("Seeded rich demo data for {}. Demo login: {} / DemoPassword123", user.getEmail(), DEMO_EMAIL);
+        log.info("Seeded rich demo data for {}. Demo login email: {}", user.getEmail(), demoEmail);
     }
 
     private List<Application> seedApplications(User user) {
@@ -258,7 +273,7 @@ public class SeedDataInitializer implements CommandLineRunner {
                         .originalFileName(baseName + ".pdf")
                         .storedFileName("demo_user_" + application.getCompanyName().toLowerCase() + "_" + application.getJobId() + ".pdf")
                         .publicId("jobflow/seed/" + user.getId() + "/" + application.getId() + "/" + application.getJobId() + "/" + fileType.toLowerCase())
-                        .fileUrl("https://res.cloudinary.com/demo/raw/upload/jobflow/seed/" + fileType.toLowerCase() + ".pdf")
+                        .fileUrl(resolveSampleFileBaseUrl() + "/" + fileType.toLowerCase() + ".pdf")
                         .contentType("application/pdf")
                         .fileSize(128_000L + application.getId())
                         .companyName(application.getCompanyName())
@@ -266,6 +281,12 @@ public class SeedDataInitializer implements CommandLineRunner {
                         .build());
             }
         }
+    }
+
+    private String resolveSampleFileBaseUrl() {
+        return sampleFileBaseUrl.endsWith("/")
+                ? sampleFileBaseUrl.substring(0, sampleFileBaseUrl.length() - 1)
+                : sampleFileBaseUrl;
     }
 
     private String seedCompany(int index) {

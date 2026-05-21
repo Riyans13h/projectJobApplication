@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Download } from "lucide-react";
 import { InterviewForm, type InterviewFormSubmit } from "@/components/forms/InterviewForm";
 import { FilterPanel } from "@/components/interviews/FilterPanel";
 import { InterviewCard } from "@/components/interviews/InterviewCard";
@@ -17,6 +18,7 @@ import { applicationService } from "@/services/application.service";
 import { interviewService } from "@/services/interview.service";
 import type { Application } from "@/types/application";
 import type { InterviewFilters, InterviewWithApplication } from "@/types/interview";
+import { downloadCsv, timestampedCsvName } from "@/utils/csv";
 
 const pageSize = 8;
 type DeleteRequest = { ids: number[]; label: string } | null;
@@ -111,6 +113,7 @@ export default function InterviewsPage() {
   const totalPages = Math.max(1, Math.ceil(filteredInterviews.length / pageSize));
   const currentPage = Math.min(page, totalPages - 1);
   const pagedInterviews = filteredInterviews.slice(currentPage * pageSize, currentPage * pageSize + pageSize);
+  const upcomingInterviews = filteredInterviews.filter((interview) => new Date(interview.interviewDate).getTime() >= Date.now());
 
   function updateFilters(next: Partial<InterviewFilters>) {
     setPage(0);
@@ -132,9 +135,28 @@ export default function InterviewsPage() {
 
   const selectedVisibleCount = selectedIds.filter((id) => pagedInterviews.some((interview) => interview.id === id)).length;
 
+  const exportUpcomingInterviews = () => {
+    downloadCsv<InterviewWithApplication>(timestampedCsvName("jobflow-upcoming-interviews"), upcomingInterviews, [
+      { header: "Company", value: (row) => row.companyName },
+      { header: "Role", value: (row) => row.role },
+      { header: "Round", value: (row) => row.roundName },
+      { header: "Interview Date", value: (row) => row.interviewDate },
+      { header: "Mode", value: (row) => row.mode },
+      { header: "Result", value: (row) => row.result },
+      { header: "Notes", value: (row) => row.notes },
+      { header: "Application ID", value: (row) => row.applicationId },
+    ]);
+  };
+
   return (
     <DashboardShell>
-      <Header title="Interviews" description="Track interview rounds across your active applications." />
+      <div className="flex items-start justify-between gap-4">
+        <Header title="Interviews" description="Track interview rounds across your active applications." />
+        <Button type="button" variant="outline" onClick={exportUpcomingInterviews} disabled={interviewsQuery.isLoading}>
+          <Download className="mr-2 h-4 w-4" />
+          Upcoming CSV
+        </Button>
+      </div>
 
       <div className="space-y-6">
         <Card>

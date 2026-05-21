@@ -91,8 +91,8 @@ export const applicationService = {
     });
     return data;
   },
-  cooldown: async (company: string) => {
-    const { data } = await api.get<CooldownInfo>("/cooldown/check", { params: { company } });
+  cooldown: async (company: string, role?: string) => {
+    const { data } = await api.get<CooldownInfo>("/cooldown/check", { params: { company, role: role || undefined } });
     return data;
   },
 };

@@ -44,6 +44,12 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
             String companyName
     );
 
+    Optional<Application> findFirstByUserIdAndCompanyNameIgnoreCaseAndRoleIgnoreCaseOrderByApplicationDateDescCreatedAtDesc(
+            Long userId,
+            String companyName,
+            String role
+    );
+
     /**
      * Find applications by priority for a user
      */

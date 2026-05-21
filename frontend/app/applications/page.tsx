@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Download } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { FilterPanel } from "@/components/applications/FilterPanel";
@@ -12,7 +13,8 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Loader } from "@/components/ui/loader";
 import { applicationService } from "@/services/application.service";
-import type { ApplicationStatus, Priority } from "@/types/application";
+import type { Application, ApplicationStatus, Priority } from "@/types/application";
+import { downloadCsv, timestampedCsvName } from "@/utils/csv";
 
 type DeleteRequest = { ids: number[]; label: string } | null;
 
@@ -89,13 +91,50 @@ export default function ApplicationsPage() {
 
   const selectedVisibleCount = selectedIds.filter((id) => visibleApplications.some((application) => application.id === id)).length;
 
+  const exportApplications = async () => {
+    const response = await applicationService.list({
+      page: 0,
+      size: 1000,
+      company: company.trim() || undefined,
+      status,
+      priority,
+    });
+    const normalizedRole = role.trim().toLowerCase();
+    const rows = normalizedRole
+      ? response.content.filter((application) => application.role.toLowerCase().includes(normalizedRole))
+      : response.content;
+
+    downloadCsv<Application>(timestampedCsvName("jobflow-applications"), rows, [
+      { header: "Company", value: (row) => row.companyName },
+      { header: "Role", value: (row) => row.role },
+      { header: "Job ID", value: (row) => row.jobId },
+      { header: "Location", value: (row) => row.location },
+      { header: "Work Mode", value: (row) => row.workMode },
+      { header: "Employment Type", value: (row) => row.employmentType },
+      { header: "Status", value: (row) => row.status },
+      { header: "Priority", value: (row) => row.priority },
+      { header: "Application Date", value: (row) => row.applicationDate },
+      { header: "Applied Through", value: (row) => row.appliedThrough },
+      { header: "Email Used", value: (row) => row.emailUsed },
+      { header: "Phone Used", value: (row) => row.phoneUsed },
+      { header: "Cooldown Period", value: (row) => row.cooldownPeriod },
+      { header: "Notes", value: (row) => row.notes },
+    ]);
+  };
+
   return (
     <DashboardShell>
       <div className="flex items-start justify-between gap-4">
         <Header title="Applications" description="Track roles, stages, and outcomes." />
-        <Button asChild>
-          <Link href="/applications/create">New</Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" onClick={exportApplications} disabled={applications.isLoading}>
+            <Download className="mr-2 h-4 w-4" />
+            CSV
+          </Button>
+          <Button asChild>
+            <Link href="/applications/create">New</Link>
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-3">

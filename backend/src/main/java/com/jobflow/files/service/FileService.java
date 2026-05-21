@@ -52,10 +52,10 @@ public class FileService {
     @Value("${cloudinary.api-secret:}")
     private String apiSecret;
 
-    @Value("${app.file-storage.local-dir:uploads}")
+    @Value("${app.file-storage.local-dir}")
     private String localStorageDir;
 
-    @Value("${app.public-base-url:http://localhost:8080/api}")
+    @Value("${app.public-base-url}")
     private String publicBaseUrl;
 
     public FileUploadResponse uploadResume(MultipartFile file, String company, String jobId, Long userId) {

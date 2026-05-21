@@ -9,7 +9,7 @@ import { cn } from "@/utils/cn";
 
 export function DashboardShell({ children }: { children: ReactNode }) {
   const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
+  const { hasHydrated, isAuthenticated } = useAuthStore();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -18,12 +18,12 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (mounted && !isAuthenticated) {
+    if (mounted && hasHydrated && !isAuthenticated) {
       router.replace("/auth/login");
     }
-  }, [isAuthenticated, mounted, router]);
+  }, [hasHydrated, isAuthenticated, mounted, router]);
 
-  if (!mounted) {
+  if (!mounted || !hasHydrated || !isAuthenticated) {
     return null;
   }
 
