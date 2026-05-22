@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download } from "lucide-react";
+import { CalendarPlus, Download } from "lucide-react";
 import { InterviewForm, type InterviewFormSubmit } from "@/components/forms/InterviewForm";
 import { FilterPanel } from "@/components/interviews/FilterPanel";
 import { InterviewCard } from "@/components/interviews/InterviewCard";
@@ -160,8 +160,16 @@ export default function InterviewsPage() {
 
       <div className="space-y-6">
         <Card>
-          <CardHeader>
-            <CardTitle>Add interview round</CardTitle>
+          <CardHeader className="border-b bg-secondary/20">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
+                <CalendarPlus className="h-5 w-5" />
+              </span>
+              <div>
+                <CardTitle>Add interview round</CardTitle>
+                <p className="mt-1 text-sm text-muted-foreground">Schedule a round and keep the result updated as it moves forward.</p>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <InterviewForm

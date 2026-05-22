@@ -2,7 +2,6 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  AlertTriangle,
   CalendarClock,
   CheckCircle2,
   Download,
@@ -13,7 +12,7 @@ import {
   ShieldAlert,
   Trash2,
 } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, Fragment, useMemo, useState } from "react";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { Header } from "@/components/layout/Header";
 import { Badge } from "@/components/ui/badge";
@@ -23,8 +22,9 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader } from "@/components/ui/loader";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cooldownService } from "@/services/cooldown.service";
-import type { CompanyCooldown, CompanyCooldownPayload, CooldownInfo } from "@/types/application";
+import type { CompanyCooldown, CompanyCooldownPayload } from "@/types/application";
 import { downloadCsv, timestampedCsvName } from "@/utils/csv";
 
 type DeleteTarget = {
@@ -34,8 +34,6 @@ type DeleteTarget = {
 
 export default function CooldownPage() {
   const queryClient = useQueryClient();
-  const [checkCompany, setCheckCompany] = useState("");
-  const [checkRole, setCheckRole] = useState("");
   const [query, setQuery] = useState("");
   const [bulkText, setBulkText] = useState("");
   const [bulkError, setBulkError] = useState("");
@@ -53,11 +51,13 @@ export default function CooldownPage() {
   const activeCooldowns = useQuery({
     queryKey: ["cooldown", "active"],
     queryFn: cooldownService.active,
+    refetchInterval: 60_000,
   });
 
   const almostEligibleCooldowns = useQuery({
     queryKey: ["cooldown", "almost-eligible"],
     queryFn: cooldownService.almostEligible,
+    refetchInterval: 60_000,
   });
 
   const cooldownHistory = useQuery({
@@ -68,10 +68,6 @@ export default function CooldownPage() {
   const cooldownTemplates = useQuery({
     queryKey: ["cooldown", "templates"],
     queryFn: cooldownService.templates,
-  });
-
-  const checkCooldown = useMutation({
-    mutationFn: ({ company, role }: { company: string; role?: string }) => cooldownService.check(company, role),
   });
 
   const createCooldown = useMutation({
@@ -120,17 +116,6 @@ export default function CooldownPage() {
     [almostEligibleCooldowns.data, query]
   );
   const filteredHistory = useMemo(() => filterCooldowns(cooldownHistory.data ?? [], query), [cooldownHistory.data, query]);
-
-  const handleCheck = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const company = checkCompany.trim();
-    const role = checkRole.trim();
-    if (!company) {
-      return;
-    }
-
-    checkCooldown.mutate({ company, role: role || undefined });
-  };
 
   const handleCreate = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -191,32 +176,7 @@ export default function CooldownPage() {
           <SummaryCard label="High severity" value={(activeCooldowns.data ?? []).filter((item) => item.severity === "HIGH").length} icon={<ShieldAlert className="h-4 w-4" />} />
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Check company</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <form className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]" onSubmit={handleCheck}>
-                <Field label="Company" htmlFor="checkCompany">
-                  <Input id="checkCompany" value={checkCompany} onChange={(event) => setCheckCompany(event.target.value)} />
-                </Field>
-                <Field label="Role optional" htmlFor="checkRole">
-                  <Input id="checkRole" value={checkRole} onChange={(event) => setCheckRole(event.target.value)} />
-                </Field>
-                <div className="flex items-end">
-                  <Button type="submit" className="w-full" disabled={checkCooldown.isPending || !checkCompany.trim()}>
-                    {checkCooldown.isPending ? <Loader className="mr-2 h-4 w-4" /> : <Hourglass className="mr-2 h-4 w-4" />}
-                    Check
-                  </Button>
-                </div>
-              </form>
-
-              {checkCooldown.isError ? <ErrorBox message="Could not check cooldown for this company." /> : null}
-              {checkCooldown.data ? <CooldownResult result={checkCooldown.data} /> : null}
-            </CardContent>
-          </Card>
-
+        <div>
           <Card>
             <CardHeader>
               <CardTitle>Add cooldown</CardTitle>
@@ -421,51 +381,67 @@ function CooldownSection({
       {loading ? <Loader /> : null}
       {error ? <ErrorBox message={`Could not load ${title.toLowerCase()}.`} /> : null}
       {!loading && !error && items.length === 0 ? <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">{emptyLabel}</div> : null}
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {items.map((cooldown) => (
-          <CooldownCard
-            key={cooldown.id}
-            cooldown={cooldown}
-            onDelete={() => onDelete(cooldown)}
-            applyAnywayId={applyAnywayId}
-            applyAnywayNote={applyAnywayNote}
-            setApplyAnywayId={setApplyAnywayId}
-            setApplyAnywayNote={setApplyAnywayNote}
-            onApplyAnyway={onApplyAnyway}
-            isApplying={isApplying}
-          />
-        ))}
-      </div>
+      {!loading && !error && items.length > 0 ? (
+        <div className="overflow-hidden rounded-lg border">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-secondary/40 hover:bg-secondary/40">
+                  <TableHead className="min-w-48">Company</TableHead>
+                  <TableHead className="min-w-36">Status</TableHead>
+                  <TableHead className="min-w-52">Counter</TableHead>
+                  <TableHead className="min-w-32">Eligible</TableHead>
+                  <TableHead className="min-w-32">Last Applied</TableHead>
+                  <TableHead className="min-w-56">Note</TableHead>
+                  <TableHead className="w-28 text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {items.map((cooldown) => (
+                  <Fragment key={cooldown.id}>
+                    <CooldownTableRow
+                      cooldown={cooldown}
+                      onDelete={() => onDelete(cooldown)}
+                      applyAnywayId={applyAnywayId}
+                      applyAnywayNote={applyAnywayNote}
+                      setApplyAnywayId={setApplyAnywayId}
+                      setApplyAnywayNote={setApplyAnywayNote}
+                      isApplying={isApplying}
+                    />
+                    {applyAnywayId === cooldown.id && setApplyAnywayId && setApplyAnywayNote && onApplyAnyway ? (
+                      <TableRow className="bg-secondary/20 hover:bg-secondary/20">
+                        <TableCell colSpan={7}>
+                          <form className="flex flex-col gap-2 sm:flex-row sm:items-center" onSubmit={onApplyAnyway}>
+                            <Input
+                              value={applyAnywayNote ?? ""}
+                              onChange={(event) => setApplyAnywayNote(event.target.value)}
+                              placeholder="Reason for applying anyway"
+                            />
+                            <div className="flex shrink-0 gap-2">
+                              <Button type="submit" size="sm" disabled={isApplying || !applyAnywayNote?.trim()}>
+                                {isApplying ? <Loader className="mr-2 h-4 w-4" /> : null}
+                                Save note
+                              </Button>
+                              <Button type="button" size="sm" variant="outline" onClick={() => setApplyAnywayId(null)}>
+                                Cancel
+                              </Button>
+                            </div>
+                          </form>
+                        </TableCell>
+                      </TableRow>
+                    ) : null}
+                  </Fragment>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
 
-function CooldownResult({ result }: { result: CooldownInfo }) {
-  const active = result.cooldownActive;
-
-  return (
-    <div className={active ? "rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100" : "rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-emerald-950 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-100"}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            {active ? <AlertTriangle className="h-4 w-4" /> : <CalendarClock className="h-4 w-4" />}
-            {formatCompanyRole(result.companyName, result.role)}
-          </div>
-          <p className="text-sm">{result.message}</p>
-        </div>
-        <SeverityBadge severity={result.severity} active={active} daysRemaining={result.daysRemaining} />
-      </div>
-      <div className="mt-4 grid gap-3 text-sm sm:grid-cols-4">
-        <Info label="Last applied" value={formatDate(result.lastAppliedDate)} />
-        <Info label="Cooldown period" value={`${result.cooldownPeriod ?? 0} days`} />
-        <Info label="Eligible date" value={formatDate(result.eligibleReapplyDate)} />
-        <Info label="Suggested date" value={formatDate(result.suggestedReapplyDate)} />
-      </div>
-    </div>
-  );
-}
-
-function CooldownCard({
+function CooldownTableRow({
   cooldown,
   onDelete,
   applyAnywayId,
@@ -485,68 +461,115 @@ function CooldownCard({
   isApplying?: boolean;
 }) {
   const isApplyFormOpen = applyAnywayId === cooldown.id;
+  const counter = getCooldownCounter(cooldown);
 
   return (
-    <div className="rounded-lg border p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
-              <Hourglass className="h-4 w-4" />
-            </span>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">{cooldown.companyName}</p>
-              <p className="truncate text-xs text-muted-foreground">{cooldown.role || "All roles"}</p>
-            </div>
+    <TableRow>
+      <TableCell>
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+            <Hourglass className="h-4 w-4" />
+          </span>
+          <div className="min-w-0">
+            <p className="truncate font-semibold">{cooldown.companyName}</p>
+            <p className="truncate text-xs text-muted-foreground">{cooldown.role || "All roles"}</p>
           </div>
-          <p className="mt-3 text-sm text-muted-foreground">{cooldown.message}</p>
         </div>
-        <Button variant="ghost" size="icon" aria-label="Delete cooldown" onClick={onDelete}>
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </div>
-      <div className="mt-4 flex flex-wrap gap-2">
+      </TableCell>
+      <TableCell>
+        <div className="flex flex-wrap items-center gap-2">
         <SeverityBadge severity={cooldown.severity} active={cooldown.cooldownActive} daysRemaining={cooldown.daysRemaining} />
         {cooldown.source ? <Badge>{formatLabel(cooldown.source)}</Badge> : null}
         {cooldown.applyAnywayNote ? <Badge>Apply anyway noted</Badge> : null}
-      </div>
-      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-        <Info label="Eligible" value={formatDate(cooldown.eligibleReapplyDate)} />
-        <Info label="Remaining" value={`${cooldown.daysRemaining} day(s)`} />
-        <Info label="Last applied" value={formatDate(cooldown.lastAppliedDate)} />
-        <Info label="Suggested" value={formatDate(cooldown.suggestedReapplyDate)} />
-      </div>
-      {cooldown.applyAnywayNote ? <p className="mt-3 rounded-md bg-secondary p-2 text-xs text-muted-foreground">{cooldown.applyAnywayNote}</p> : null}
-      {setApplyAnywayId && setApplyAnywayNote && onApplyAnyway && cooldown.cooldownActive ? (
-        <div className="mt-3">
-          {isApplyFormOpen ? (
-            <form className="space-y-2" onSubmit={onApplyAnyway}>
-              <Input value={applyAnywayNote ?? ""} onChange={(event) => setApplyAnywayNote(event.target.value)} placeholder="Reason for applying anyway" />
-              <div className="flex gap-2">
-                <Button type="submit" size="sm" disabled={isApplying || !applyAnywayNote?.trim()}>
-                  {isApplying ? <Loader className="mr-2 h-4 w-4" /> : null}
-                  Save note
-                </Button>
-                <Button type="button" size="sm" variant="outline" onClick={() => setApplyAnywayId(null)}>
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          ) : (
+        </div>
+      </TableCell>
+      <TableCell>
+        <CooldownProgress counter={counter} />
+      </TableCell>
+      <TableCell>
+        <p className="font-medium">{formatDate(cooldown.eligibleReapplyDate)}</p>
+        <p className="text-xs text-muted-foreground">{counter.active ? `${counter.daysRemaining} day(s) left` : "Ready now"}</p>
+      </TableCell>
+      <TableCell>
+        <p className="font-medium">{formatDate(cooldown.lastAppliedDate)}</p>
+        <p className="text-xs text-muted-foreground">Suggested {formatDate(cooldown.suggestedReapplyDate)}</p>
+      </TableCell>
+      <TableCell>
+        <p className="line-clamp-2 text-xs leading-5 text-muted-foreground">{cooldown.applyAnywayNote || cooldown.message}</p>
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="flex justify-end gap-1">
+          {setApplyAnywayId && setApplyAnywayNote && cooldown.cooldownActive ? (
             <Button
               type="button"
               size="sm"
-              variant="outline"
+              variant={isApplyFormOpen ? "secondary" : "outline"}
               onClick={() => {
-                setApplyAnywayId(cooldown.id);
-                setApplyAnywayNote(cooldown.applyAnywayNote ?? "");
+                setApplyAnywayId(isApplyFormOpen ? null : cooldown.id);
+                setApplyAnywayNote(isApplyFormOpen ? "" : cooldown.applyAnywayNote ?? "");
               }}
             >
-              Apply anyway note
+              Note
             </Button>
-          )}
+          ) : null}
+          <Button variant="ghost" size="icon" aria-label="Delete cooldown" onClick={onDelete}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
         </div>
-      ) : null}
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function CooldownProgress({ counter }: { counter: CooldownCounterState }) {
+  const label = counter.active ? `${counter.daysRemaining}d left` : "Ready";
+  const barClassName = counter.active
+    ? counter.daysRemaining > 60
+      ? "bg-red-500"
+      : counter.daysRemaining >= 15
+        ? "bg-amber-500"
+        : "bg-blue-500"
+    : "bg-emerald-500";
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between gap-3 text-xs">
+        <span className="font-semibold">{label}</span>
+        <span className="text-muted-foreground">{counter.progress}%</span>
+      </div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
+        <div className={`h-full rounded-full ${barClassName}`} style={{ width: `${counter.progress}%` }} />
+      </div>
+      <p className="text-xs text-muted-foreground">{counter.completedDays}/{counter.totalDays} days done</p>
+    </div>
+  );
+}
+
+function CountdownCounter({ counter }: { counter: CooldownCounterState }) {
+  const statusText = counter.active ? `${counter.daysRemaining} day${counter.daysRemaining === 1 ? "" : "s"} left` : "Ready to reapply";
+  const barClassName = counter.active
+    ? counter.daysRemaining > 60
+      ? "bg-red-500"
+      : counter.daysRemaining >= 15
+        ? "bg-amber-500"
+        : "bg-blue-500"
+    : "bg-emerald-500";
+
+  return (
+    <div className="mt-3 rounded-md border bg-secondary/30 px-3 py-2">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-medium uppercase text-muted-foreground">Counter</p>
+          <p className="mt-0.5 truncate text-lg font-semibold leading-none">{statusText}</p>
+        </div>
+        <div className="shrink-0 text-right text-xs text-muted-foreground">
+          <p>{counter.progress}% complete</p>
+          <p>{counter.completedDays}/{counter.totalDays} days</p>
+        </div>
+      </div>
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-background">
+        <div className={`h-full rounded-full ${barClassName}`} style={{ width: `${counter.progress}%` }} />
+      </div>
     </div>
   );
 }
@@ -577,8 +600,8 @@ function Field({ label, htmlFor, children }: { label: string; htmlFor: string; c
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-xs font-medium uppercase text-muted-foreground">{label}</div>
-      <div className="mt-1 font-medium">{value}</div>
+      <div className="text-[11px] font-medium uppercase text-muted-foreground">{label}</div>
+      <div className="mt-0.5 truncate font-medium">{value}</div>
     </div>
   );
 }
@@ -682,6 +705,51 @@ function filterCooldowns(items: CompanyCooldown[], query: string) {
       .toLowerCase();
     return values.includes(normalizedQuery);
   });
+}
+
+type CooldownCounterState = {
+  active: boolean;
+  daysRemaining: number;
+  completedDays: number;
+  totalDays: number;
+  progress: number;
+};
+
+function getCooldownCounter(cooldown: CompanyCooldown): CooldownCounterState {
+  const totalDays = Math.max(0, cooldown.cooldownPeriod ?? 0);
+  const dateBasedRemaining = calculateDaysUntil(cooldown.eligibleReapplyDate);
+  const daysRemaining = Math.max(0, dateBasedRemaining ?? cooldown.daysRemaining ?? 0);
+  const active = cooldown.cooldownActive && daysRemaining > 0;
+  const completedDays = Math.min(totalDays, Math.max(0, totalDays - daysRemaining));
+  const progress = totalDays > 0 ? Math.min(100, Math.max(0, Math.round((completedDays / totalDays) * 100))) : active ? 0 : 100;
+
+  return {
+    active,
+    daysRemaining,
+    completedDays,
+    totalDays,
+    progress,
+  };
+}
+
+function calculateDaysUntil(value?: string) {
+  if (!value) {
+    return null;
+  }
+
+  const target = new Date(value);
+  if (Number.isNaN(target.getTime())) {
+    return null;
+  }
+
+  const today = startOfLocalDay(new Date());
+  const targetDay = startOfLocalDay(target);
+  const millisecondsPerDay = 24 * 60 * 60 * 1000;
+  return Math.max(0, Math.ceil((targetDay.getTime() - today.getTime()) / millisecondsPerDay));
+}
+
+function startOfLocalDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
 async function refreshCooldowns(queryClient: ReturnType<typeof useQueryClient>) {

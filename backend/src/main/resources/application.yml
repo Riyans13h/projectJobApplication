@@ -11,7 +11,7 @@ spring:
       maximum-pool-size: ${DB_POOL_MAX_SIZE:1}
       minimum-idle: ${DB_POOL_MIN_IDLE:1}
       connection-timeout: 30000
-      connection-init-sql: PRAGMA busy_timeout=10000
+      connection-init-sql: ${DB_CONNECTION_INIT_SQL:}
 
   flyway:
     enabled: false

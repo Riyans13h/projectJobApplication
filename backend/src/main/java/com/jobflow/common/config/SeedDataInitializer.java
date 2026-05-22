@@ -13,6 +13,8 @@ import com.jobflow.contacts.enums.ContactStatus;
 import com.jobflow.contacts.enums.ContactType;
 import com.jobflow.contacts.enums.HelpScore;
 import com.jobflow.contacts.repository.ContactRepository;
+import com.jobflow.cooldown.entity.CompanyCooldown;
+import com.jobflow.cooldown.repository.CompanyCooldownRepository;
 import com.jobflow.files.entity.UploadedFile;
 import com.jobflow.files.repository.UploadedFileRepository;
 import com.jobflow.interviews.entity.Interview;
@@ -41,6 +43,7 @@ import java.util.List;
 public class SeedDataInitializer implements CommandLineRunner {
 
     private static final String SEED_JOB_PREFIX = "SEED-";
+    private static final String FEATURE_SEED_JOB_PREFIX = "SEED-FEATURE-";
 
     @Value("${app.seed.demo-email}")
     private String demoEmail;
@@ -63,6 +66,7 @@ public class SeedDataInitializer implements CommandLineRunner {
     private final InterviewRepository interviewRepository;
     private final TimelineRepository timelineRepository;
     private final UploadedFileRepository uploadedFileRepository;
+    private final CompanyCooldownRepository companyCooldownRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -87,6 +91,7 @@ public class SeedDataInitializer implements CommandLineRunner {
         boolean alreadySeeded = applicationRepository.existsByUserIdAndJobIdStartingWith(user.getId(), SEED_JOB_PREFIX);
 
         if (alreadySeeded) {
+            seedFeatureTourIfNeeded(user);
             log.info("Seed data already exists for {}", user.getEmail());
             return;
         }
@@ -96,8 +101,23 @@ public class SeedDataInitializer implements CommandLineRunner {
         seedInterviews(applications);
         seedTimeline(applications);
         seedUploadedFiles(user, applications);
+        seedFeatureTourIfNeeded(user);
 
         log.info("Seeded rich demo data for {}. Demo login email: {}", user.getEmail(), demoEmail);
+    }
+
+    private void seedFeatureTourIfNeeded(User user) {
+        boolean featureSeeded = applicationRepository.existsByUserIdAndJobIdStartingWith(user.getId(), FEATURE_SEED_JOB_PREFIX);
+        if (featureSeeded) {
+            return;
+        }
+
+        List<Application> applications = seedFeatureTourApplications(user);
+        seedFeatureTourInterviews(applications);
+        seedFeatureTourTimeline(applications);
+        seedFeatureTourFiles(user, applications);
+        seedFeatureTourContacts(user);
+        seedFeatureTourCooldowns(user);
     }
 
     private List<Application> seedApplications(User user) {
@@ -281,6 +301,170 @@ public class SeedDataInitializer implements CommandLineRunner {
                         .build());
             }
         }
+    }
+
+    private List<Application> seedFeatureTourApplications(User user) {
+        LocalDate today = LocalDate.now();
+        List<ApplicationSeed> seeds = List.of(
+                new ApplicationSeed("OpenAI", "Platform Engineer", "Remote", WorkMode.REMOTE, EmploymentType.FULL_TIME, ApplicationStatus.OA_RECEIVED, Priority.CRITICAL, 1, 45, "Careers page"),
+                new ApplicationSeed("Datadog", "Observability Engineer", "Bengaluru", WorkMode.HYBRID, EmploymentType.FULL_TIME, ApplicationStatus.INTERVIEW_SCHEDULED, Priority.HIGH, 5, 60, "Recruiter"),
+                new ApplicationSeed("Shopify", "Frontend Developer", "Remote", WorkMode.REMOTE, EmploymentType.CONTRACT, ApplicationStatus.INTERVIEW_IN_PROGRESS, Priority.MEDIUM, 9, 30, "LinkedIn"),
+                new ApplicationSeed("Dropbox", "Backend Developer", "Remote", WorkMode.REMOTE, EmploymentType.FULL_TIME, ApplicationStatus.OFFER_RECEIVED, Priority.CRITICAL, 14, 0, "Referral"),
+                new ApplicationSeed("Canva", "Product Engineer", "Bengaluru", WorkMode.HYBRID, EmploymentType.FULL_TIME, ApplicationStatus.APPLIED, Priority.HIGH, 2, 30, "Alumni referral")
+        );
+
+        List<Application> applications = new ArrayList<>();
+        for (int index = 0; index < seeds.size(); index++) {
+            ApplicationSeed seed = seeds.get(index);
+            applications.add(applicationRepository.save(Application.builder()
+                    .user(user)
+                    .userId(user.getId())
+                    .companyName(seed.company())
+                    .role(seed.role())
+                    .jobId(FEATURE_SEED_JOB_PREFIX + String.format("%03d", index + 1))
+                    .location(seed.location())
+                    .workMode(seed.workMode())
+                    .employmentType(seed.employmentType())
+                    .status(seed.status())
+                    .priority(seed.priority())
+                    .applicationDate(today.minusDays(seed.daysAgo()))
+                    .appliedThrough(seed.appliedThrough())
+                    .emailUsed(user.getEmail())
+                    .phoneUsed("+91-88000-55" + String.format("%03d", index))
+                    .cooldownPeriod(seed.cooldownPeriod())
+                    .notes("Feature tour seed: use this row to test " + seed.status().getDisplayName() + ", filters, details, files, timeline, and dashboard counts.")
+                    .build()));
+        }
+        return applications;
+    }
+
+    private void seedFeatureTourInterviews(List<Application> applications) {
+        LocalDateTime now = LocalDateTime.now().withSecond(0).withNano(0);
+        for (int index = 0; index < applications.size(); index++) {
+            Application application = applications.get(index);
+            interviewRepository.save(Interview.builder()
+                    .application(application)
+                    .roundName(index % 2 == 0 ? "Feature Tour Technical Round" : "Feature Tour Hiring Manager")
+                    .interviewDate(now.plusDays(index + 1L).withHour(10 + index).withMinute(index % 2 == 0 ? 0 : 30))
+                    .mode(InterviewMode.values()[index % InterviewMode.values().length])
+                    .result(index < 3 ? InterviewResult.PENDING : InterviewResult.PASSED)
+                    .notes("Feature tour seed: upcoming interview card, interview filters, and details page.")
+                    .build());
+        }
+    }
+
+    private void seedFeatureTourTimeline(List<Application> applications) {
+        LocalDateTime now = LocalDateTime.now();
+        for (int index = 0; index < applications.size(); index++) {
+            Application application = applications.get(index);
+            timelineRepository.save(Timeline.builder()
+                    .application(application)
+                    .event("Feature Tour Created")
+                    .notes("Use this timeline item to understand activity history for " + application.getCompanyName() + ".")
+                    .eventDate(now.minusDays(index + 3L))
+                    .build());
+            timelineRepository.save(Timeline.builder()
+                    .application(application)
+                    .event(application.getStatus().getDisplayName())
+                    .notes("Feature tour status event for dashboard recent activity.")
+                    .eventDate(now.minusDays(index + 1L))
+                    .build());
+        }
+    }
+
+    private void seedFeatureTourFiles(User user, List<Application> applications) {
+        String[] fileTypes = {"RESUME", "JD", "COVER_LETTER"};
+        for (Application application : applications) {
+            for (String fileType : fileTypes) {
+                String baseName = "feature_" + fileType.toLowerCase() + "_" + application.getCompanyName().toLowerCase();
+                uploadedFileRepository.save(UploadedFile.builder()
+                        .userId(user.getId())
+                        .fileType(fileType)
+                        .originalFileName(baseName + ".pdf")
+                        .storedFileName("feature_tour_" + application.getCompanyName().toLowerCase() + "_" + application.getJobId() + ".pdf")
+                        .publicId("jobflow/seed/feature/" + user.getId() + "/" + application.getJobId() + "/" + fileType.toLowerCase())
+                        .fileUrl(resolveSampleFileBaseUrl() + "/" + fileType.toLowerCase() + ".pdf")
+                        .contentType("application/pdf")
+                        .fileSize(160_000L + application.getId())
+                        .companyName(application.getCompanyName())
+                        .jobId(application.getJobId())
+                        .build());
+            }
+        }
+    }
+
+    private void seedFeatureTourContacts(User user) {
+        LocalDate today = LocalDate.now();
+        List<Contact> contacts = List.of(
+                Contact.builder()
+                        .user(user)
+                        .name("Feature Recruiter")
+                        .company("Datadog")
+                        .role("Senior Technical Recruiter")
+                        .level("Senior")
+                        .linkedinUrl("https://linkedin.com/in/jobflow-feature-recruiter")
+                        .email("feature.recruiter@jobflow.local")
+                        .phone("+91-90000-20001")
+                        .contactType(ContactType.RECRUITER)
+                        .status(ContactStatus.FOLLOW_UP_NEEDED)
+                        .helpScore(HelpScore.EIGHT)
+                        .source("Feature tour")
+                        .notes("Feature tour contact: pending follow-up reminder example.")
+                        .lastContactDate(today.minusDays(3))
+                        .nextFollowupDate(today)
+                        .build(),
+                Contact.builder()
+                        .user(user)
+                        .name("Feature Referral")
+                        .company("Dropbox")
+                        .role("Staff Backend Engineer")
+                        .level("Staff")
+                        .linkedinUrl("https://linkedin.com/in/jobflow-feature-referral")
+                        .email("feature.referral@jobflow.local")
+                        .phone("+91-90000-20002")
+                        .contactType(ContactType.REFERRAL)
+                        .status(ContactStatus.REFERRAL_GIVEN)
+                        .helpScore(HelpScore.TEN)
+                        .source("Feature tour")
+                        .notes("Feature tour contact: high-help referral example.")
+                        .lastContactDate(today.minusDays(1))
+                        .nextFollowupDate(today.plusDays(2))
+                        .build()
+        );
+        contactRepository.saveAll(contacts);
+    }
+
+    private void seedFeatureTourCooldowns(User user) {
+        LocalDate today = LocalDate.now();
+        List<CompanyCooldown> cooldowns = List.of(
+                buildCooldown(user, "Uber", "Platform Engineer", today.minusDays(20), 60, "AUTO_REJECTED", null, null),
+                buildCooldown(user, "Tesla", "Backend Engineer", today.minusDays(83), 90, "MANUAL", null, null),
+                buildCooldown(user, "Adobe", "Java Developer", today.minusDays(20), 15, "MANUAL", null, null),
+                buildCooldown(user, "Google", "Software Engineer", today.minusDays(10), 30, "MANUAL", "Applied anyway to a different team after recruiter confirmation.", LocalDateTime.now().minusDays(1))
+        );
+        companyCooldownRepository.saveAll(cooldowns);
+    }
+
+    private CompanyCooldown buildCooldown(
+            User user,
+            String company,
+            String role,
+            LocalDate lastAppliedDate,
+            int cooldownPeriod,
+            String source,
+            String applyAnywayNote,
+            LocalDateTime appliedAnywayAt) {
+        return CompanyCooldown.builder()
+                .userId(user.getId())
+                .companyName(company)
+                .role(role)
+                .lastAppliedDate(lastAppliedDate)
+                .cooldownPeriod(cooldownPeriod)
+                .eligibleReapplyDate(lastAppliedDate.plusDays(cooldownPeriod))
+                .source(source)
+                .applyAnywayNote(applyAnywayNote)
+                .appliedAnywayAt(appliedAnywayAt)
+                .build();
     }
 
     private String resolveSampleFileBaseUrl() {

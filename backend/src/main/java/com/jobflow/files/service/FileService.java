@@ -94,6 +94,25 @@ public class FileService {
         }
     }
 
+    public int deleteFilesForApplication(Long userId, String companyName, String jobId) {
+        String normalizedCompany = trimToNull(companyName);
+        if (normalizedCompany == null) {
+            return 0;
+        }
+
+        List<UploadedFile> files = uploadedFileRepository.findApplicationFiles(userId, normalizedCompany, trimToNull(jobId));
+        for (UploadedFile file : files) {
+            try {
+                deleteStoredFile(file);
+            } catch (IOException e) {
+                log.warn("Could not delete stored file {} during application cleanup: {}", file.getId(), e.getMessage());
+            }
+            uploadedFileRepository.delete(file);
+        }
+
+        return files.size();
+    }
+
     @Transactional(readOnly = true)
     public List<FileUploadResponse> getFiles(String company, String jobId, Long userId) {
         validateRequiredText(company, "Company is required");

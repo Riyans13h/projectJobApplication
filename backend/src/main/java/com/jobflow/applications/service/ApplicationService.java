@@ -14,6 +14,7 @@ import com.jobflow.applications.repository.ApplicationRepository;
 import com.jobflow.auth.entity.User;
 import com.jobflow.auth.service.AuthService;
 import com.jobflow.cooldown.service.CooldownService;
+import com.jobflow.files.service.FileService;
 import com.jobflow.interviews.repository.InterviewRepository;
 import com.jobflow.timeline.repository.TimelineRepository;
 import com.jobflow.timeline.service.TimelineService;
@@ -39,6 +40,7 @@ public class ApplicationService {
     private final InterviewRepository interviewRepository;
     private final AuthService authService;
     private final CooldownService cooldownService;
+    private final FileService fileService;
 
     /**
      * Create a new application for logged-in user
@@ -96,6 +98,11 @@ public class ApplicationService {
 
         applicationMapper.updateEntity(request, application);
         Application updatedApplication = applicationRepository.save(application);
+        if (updatedApplication.getStatus() == ApplicationStatus.REJECTED) {
+            handleRejectedApplicationCleanup(updatedApplication);
+            log.info("Rejected application cleaned up after update: {} for user: {}", id, userId);
+            return applicationMapper.toResponse(updatedApplication);
+        }
 
         log.info("Application updated: {} for user: {}", id, userId);
         return applicationMapper.toResponse(updatedApplication);
@@ -118,8 +125,7 @@ public class ApplicationService {
                 "Application status updated to " + status.getDisplayName()
         );
         if (status == ApplicationStatus.REJECTED) {
-            cooldownService.createRejectedApplicationCooldown(updatedApplication)
-                    .ifPresent(cooldown -> log.info("Auto cooldown created for rejected application: {}", cooldown.getId()));
+            handleRejectedApplicationCleanup(updatedApplication);
         }
 
         log.info("Application status updated: {}", id);
@@ -137,6 +143,7 @@ public class ApplicationService {
 
         timelineRepository.deleteByApplication_Id(application.getId());
         interviewRepository.deleteByApplication_Id(application.getId());
+        fileService.deleteFilesForApplication(application.getUserId(), application.getCompanyName(), application.getJobId());
         applicationRepository.delete(application);
         log.info("Application deleted: {} for user: {}", id, userId);
     }
@@ -226,5 +233,22 @@ public class ApplicationService {
             case REJECTED -> "Rejected";
             default -> "Status Updated";
         };
+    }
+
+    private void handleRejectedApplicationCleanup(Application application) {
+        cooldownService.createRejectedApplicationCooldown(application)
+                .ifPresent(cooldown -> log.info("Auto cooldown created for rejected application: {}", cooldown.getId()));
+
+        Long applicationId = application.getId();
+        Long userId = application.getUserId();
+        String companyName = application.getCompanyName();
+        String jobId = application.getJobId();
+
+        int deletedFiles = fileService.deleteFilesForApplication(userId, companyName, jobId);
+        timelineRepository.deleteByApplication_Id(applicationId);
+        interviewRepository.deleteByApplication_Id(applicationId);
+        applicationRepository.delete(application);
+
+        log.info("Rejected application cleanup completed for application: {}, files deleted: {}", applicationId, deletedFiles);
     }
 }
